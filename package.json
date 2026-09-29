@@ -1,0 +1,23 @@
+{
+  "name": "saturn-observatory",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "An interactive, offline-capable 3D Saturn observatory",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node tests/test-navigation.mjs && node tests/test-camera-v3.mjs && node tests/test-interruptions.mjs",
+    "verify": "node scripts/verify.mjs",
+    "preview": "node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}

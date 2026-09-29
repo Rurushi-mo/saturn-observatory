@@ -1,0 +1,60 @@
+{
+  "models": [
+    {
+      "name": "cassini",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "sourcePage": "https://science.nasa.gov/resource/cassini-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/c/Cassini.glb",
+      "sourceFileSHA256": "cacdca3279b28e64280ff8e823f572311f67a83bde2d0435b26f515a1b7926be",
+      "use": "Recompressed model and/or extracted texture maps embedded in assets/embedded.json",
+      "retrievedOn": "2026-09-28"
+    },
+    {
+      "name": "saturn",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "sourcePage": "https://science.nasa.gov/resource/saturn-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/s/Saturn_1_120536.glb",
+      "sourceFileSHA256": "8dbfde533b13e938408d8aded1d1ce48a084806233f67775371d83013dba7d38",
+      "use": "Recompressed model and/or extracted texture maps embedded in assets/embedded.json",
+      "retrievedOn": "2026-09-28"
+    },
+    {
+      "name": "enceladus",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "sourcePage": "https://science.nasa.gov/resource/enceladus-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/e/Enceladus_1_504.glb",
+      "sourceFileSHA256": "7548234bae15047d6c1af6bec4f348748b1acae7d4e7bfbe50e5bb3dda75506f",
+      "use": "Recompressed model and/or extracted texture maps embedded in assets/embedded.json",
+      "retrievedOn": "2026-09-28"
+    },
+    {
+      "name": "mimas",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "sourcePage": "https://science.nasa.gov/resource/mimas-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/m/Mimas_1_1000.glb",
+      "sourceFileSHA256": "66fc9c4b5f89313afa1a8214763525232608e37560044a614eb7cfaa876c47b1",
+      "use": "Recompressed model and/or extracted texture maps embedded in assets/embedded.json",
+      "retrievedOn": "2026-09-28"
+    },
+    {
+      "name": "titan",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "sourcePage": "https://science.nasa.gov/resource/titan-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/t/Titan_1_5150.glb",
+      "sourceFileSHA256": "9e92e30902a26130895bf2558172d7f36186eb4a51368a60bc3ec1d01134fde4",
+      "use": "Recompressed model and/or extracted texture maps embedded in assets/embedded.json",
+      "retrievedOn": "2026-09-28"
+    }
+  ],
+  "ephemeris": {
+    "source": "NASA/JPL Horizons",
+    "url": "https://ssd.jpl.nasa.gov/horizons/",
+    "epochUTC": "2004-07-01T02:39:00Z",
+    "center": "500@699",
+    "referencePlane": "BODY EQUATOR",
+    "units": "KM-S",
+    "mapping": "Horizons (x,y,z) -> scene (x,z,-y)",
+    "rawResponses": "assets/horizons/"
+  },
+  "usageGuidelines": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
+}

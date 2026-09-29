@@ -1,0 +1,11 @@
+* text=auto eol=lf
+*.html -text
+index.html -text -whitespace
+*.png binary
+*.jpg binary
+*.glb binary
+archive/original-files/* -text -whitespace
+*.js text eol=lf
+*.mjs text eol=lf
+*.md text eol=lf
+*.json text eol=lf

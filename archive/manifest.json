@@ -1,0 +1,47 @@
+{
+  "archivedOn": "2026-09-29",
+  "files": [
+    {
+      "originalName": "Saturn-v1-2026-09-28.html",
+      "path": "archive/original-files/Saturn-v1-2026-09-28.html",
+      "bytes": 35102,
+      "sha256": "7ff82ef27e37a179bb84f3a718164042d090fae289e134589e261aeace798cbc"
+    },
+    {
+      "originalName": "Saturn-v1-preview.png",
+      "path": "archive/original-files/Saturn-v1-preview.png",
+      "bytes": 82004,
+      "sha256": "fa467ecbc95d1b8ef0ce781ae0d3482aa9128058d05ca679d69b244511580fbe"
+    },
+    {
+      "originalName": "Saturn-v2-history.html",
+      "path": "archive/original-files/Saturn-v2-history.html",
+      "bytes": 7353661,
+      "sha256": "6b7b1a38ce6818cf52781761c053aab05437b8ca8333b7c6405439dbf50bcb30"
+    },
+    {
+      "originalName": "Saturn-v2.html",
+      "path": "archive/original-files/Saturn-v2.html",
+      "bytes": 7353661,
+      "sha256": "6b7b1a38ce6818cf52781761c053aab05437b8ca8333b7c6405439dbf50bcb30"
+    },
+    {
+      "originalName": "Saturn-v3.html",
+      "path": "archive/original-files/Saturn-v3.html",
+      "bytes": 7361976,
+      "sha256": "dad002cc171c7d15ce8f405c4e93dc511e27bbb441cd3e7b9ea6f10c43c164db"
+    },
+    {
+      "originalName": "使用说明.txt",
+      "path": "archive/original-files/使用说明.txt",
+      "bytes": 2300,
+      "sha256": "47cf5650c33775eed05a9d2db9a12c193baf5cee248c2466e455946e1f3a3363"
+    },
+    {
+      "originalName": "第三版说明.txt",
+      "path": "archive/original-files/第三版说明.txt",
+      "bytes": 2735,
+      "sha256": "611c5f289175c8a35327f0826cfa64872fe3095930e6fb6da1db890477b7c669"
+    }
+  ]
+}
