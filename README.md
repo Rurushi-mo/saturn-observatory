@@ -4,7 +4,7 @@
 
 基于 Three.js / WebGL 的交互式三维土星观测网页。围绕同一空间中的土星、星环、19 颗主要卫星与卡西尼探测器，平滑切换观测位置。
 
-![土星观测站](docs/images/overview.png)
+![土星观测站](docs/images/live.png)
 
 ## 打开与分享
 
