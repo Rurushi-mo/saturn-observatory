@@ -17,6 +17,10 @@ assert.ok(payload,'Embedded payload missing');
 const parsed=JSON.parse(payload[1]);
 assert.deepEqual(parsed,JSON.parse(read('assets/embedded.json')));
 assert.deepEqual(parsed.ephemeris,JSON.parse(read('assets/ephemeris.json')));
+assert.equal(Object.keys(parsed.moonModels).length,8);
+assert.equal(new Set(Object.values(parsed.moonModels)).size,8);
+for(const value of Object.values(parsed.moonModels)){const glb=Buffer.from(value.split(',')[1],'base64');assert.equal(glb.readUInt32LE(0),0x46546c67);assert.equal(glb.readUInt32LE(8),glb.length);}
+assert.equal(Object.keys(JSON.parse(read('assets/moon-sources.json'))).length,19);
 for(const [name,value]of Object.entries(parsed)){if(typeof value==='string'){assert.ok(/^data:(image\/|model\/gltf-binary)/.test(value),name);assert.ok(Buffer.from(value.split(',')[1],'base64').length>0,name);}}
 assert.ok(html.includes('three.js authors')&&html.includes('Permission is hereby granted'));
 const files=[];

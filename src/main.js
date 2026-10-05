@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {planRoute,flightDistance,orientation,coneDirection,ease} from './navigation.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {createMoon} from './moon-models.js';
+import {prepareShaderMaterials} from './shader-support.js';
 const A=JSON.parse(document.getElementById('assets').textContent),$=id=>document.getElementById(id);
 const R=60268,RP=54364,MU=37931000,TAU=Math.PI*2,DEG=Math.PI/180;
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z),clamp=THREE.MathUtils.clamp,mix=THREE.MathUtils.lerp;
@@ -63,7 +65,7 @@ void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(positi
 void main(){#include <logdepthbuf_fragment>
 float r=length(vP.xz);vec4 band=texture2D(uRing,vec2((r-65000.)/80000.,.5));float tau=band.a*3.;float mu=max(.015,abs(normalize(uEye-vP).y));float alpha=1.-exp(-tau/mu);if(alpha<.0005)discard;
 float sh=sphShadow(vP+uSun*.1,uSun,vec3(60268.,54364.,60268.));float illum=.024+sh*(.24+abs(uSun.y)*.85);float phase=pow(max(0.,dot(normalize(vP-uEye),uSun)),8.);vec3 c=band.rgb*illum*(1.+phase*.4);
-if(uHole>0.){float d=length(vP-uPatch);alpha*=mix(1.,smoothstep(1.5,2.0,d),uHole);alpha*=smoothstep(.3,2.,length(uEye-uPatch));}
+if(uHole>0.){float d=length(vP-uPatch);alpha*=mix(1.,smoothstep(8.,28.,d),uHole);}
 gl_FragColor=vec4(c,alpha);}`.replaceAll(';#include',';\n#include').replaceAll('{#include','{\n#include')});
 ringMaterial.vertexShader=ringMaterial.vertexShader.replaceAll(';#include',';\n#include');const rings=anchored(new THREE.Mesh(ringGeometry,ringMaterial),zero);rings.renderOrder=3;
 // The faint E and G rings are retained at low optical depth, never a bright extra disc.
@@ -79,11 +81,12 @@ float f=pow(1.-abs(dot(normalize(vN),normalize(vV))),3.);gl_FragColor=vec4(uColo
 shell(R+150,(RP+150)/(R+150),zero,0x897b60,.17);
 // Real body radii, with positions from one coherent JPL Horizons epoch.
 const moonSpecs=[['mimas','米玛斯',198.2],['enceladus','恩克拉多斯',252.1],['tethys','忒堤斯',531.1],['dione','狄俄涅',561.4],['rhea','瑞亚',763.8],['titan','泰坦',2574.7],['hyperion','许珀里翁',135],['iapetus','伊阿珀托斯',734.5],['phoebe','菲比',106.5],['janus','雅努斯',89.5],['epimetheus','厄庇墨透斯',58.1],['helene','海伦',17.6],['telesto','忒勒斯托',12.4],['calypso','卡吕普索',10.7],['atlas','阿特拉斯',15.1],['prometheus','普罗米修斯',43.1],['pandora','潘多拉',40.7],['pan','潘',14.1],['daphnis','达芙妮',3.8]];
-const bodies={};const grayMap=texture(A.enceladus0);
-for(const [id,name,radius] of moonSpecs){const position=V(...ep[id].position);let object;if(id==='mimas'){object=await model(A.mimas);object.updateMatrixWorld(true);const size=new THREE.Box3().setFromObject(object).getSize(V());object.scale.multiplyScalar(radius*2/Math.max(size.x,size.y,size.z));object.rotation.y=-2.74;object.traverse(o=>{if(o.isMesh){o.material.metalness=0;o.material.roughness=1;o.material.color.setScalar(.9);}});}else{
-const map=id==='titan'?texture(A.titan0):grayMap;const mat=new THREE.MeshStandardMaterial({map,roughness:1,color:id==='titan'?0xc6924a:id==='enceladus'?0xf0f3f4:0xa6a49d});const geo=new THREE.SphereGeometry(radius,id==='titan'||id==='enceladus'?128:32,id==='titan'||id==='enceladus'?96:24);object=new THREE.Mesh(geo,mat);if(['hyperion','pan','atlas','prometheus','pandora'].includes(id))object.scale.set(1.3,.75,.95);
-}anchored(object,position);bodies[id]={id,name,radius,position,object};if(id==='titan')shell(radius+60,1,position,0xab763b,.24);
-const option=document.createElement('option');option.value=id;option.textContent=name;$('moonSelect').append(option);
+const bodies={};
+for(const [id,name,radius] of moonSpecs){
+ const position=V(...ep[id].position),object=await createMoon(id,{assets:A.moonModels,loadModel:model});object.updateMatrixWorld(true);
+ let maxRadius=radius;object.traverse(o=>{if(o.isMesh){const point=V(),positions=o.geometry.attributes.position;for(let i=0;i<positions.count;i++){point.fromBufferAttribute(positions,i).applyMatrix4(o.matrixWorld);maxRadius=Math.max(maxRadius,point.length());}}});
+ anchored(object,position);bodies[id]={id,name,radius,maxRadius,position,object};if(id==='titan')shell(radius+60,1,position,0xab763b,.24);
+ const option=document.createElement('option');option.value=id;option.textContent=name;$('moonSelect').append(option);
 }
 // Permanent polar curtains: physical heights of hundreds to 1,500 km and pink/violet emission.
 const auroraUniform={uTime:{value:0},uGain:{value:1}};
@@ -103,38 +106,64 @@ anchored(jets,bodies.enceladus.position).renderOrder=5;
 // NASA's detailed Cassini-Huygens geometry is kept at metre scale, including the carried probe.
 const cassini=await model(A.cassini);cassini.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(cassini);const dims=box.getSize(V());const center=box.getCenter(V());cassini.position.sub(center);const craft=new THREE.Group();craft.add(cassini);craft.scale.setScalar(.011/Math.max(dims.x,dims.y,dims.z));
 cassini.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.material.envMap=env;o.material.envMapIntensity=.33;o.material.roughness=Math.max(.35,o.material.roughness||.5);}});const cassiniPos=V(...ep.cassini.position);anchored(craft,cassiniPos);craft.rotation.set(.2,-.7,.25);
-// Locally resolved ring particles: 0.2–6 m ice bodies in a 10–30 m thick co-orbiting sheet.
+// Locally resolved ring particles: 8 km across, with a 64 km surrounding sheet.
 const patch=V(129500,0,0),patchRadius=129500,orbitalN=Math.sqrt(MU/Math.pow(patchRadius,3));
-const iceGeo=new THREE.IcosahedronGeometry(1,2);let pos=iceGeo.attributes.position;for(let i=0;i<pos.count;i++){let v=V().fromBufferAttribute(pos,i);v.multiplyScalar(.78+.24*Math.sin(v.x*29+v.y*17+v.z*11));pos.setXYZ(i,v.x,v.y,v.z);}iceGeo.computeVertexNormals();
+const iceGeo=new THREE.IcosahedronGeometry(1,1);let pos=iceGeo.attributes.position;for(let i=0;i<pos.count;i++){let v=V().fromBufferAttribute(pos,i);v.multiplyScalar(.78+.24*Math.sin(v.x*29+v.y*17+v.z*11));pos.setXYZ(i,v.x,v.y,v.z);}iceGeo.computeVertexNormals();
 const iceMat=new THREE.MeshStandardMaterial({color:0xc5cbd0,roughness:.77,metalness:.02,envMap:env,envMapIntensity:.035});
-const iceCount=7600,ice=new THREE.InstancedMesh(iceGeo,iceMat,iceCount);ice.instanceMatrix.setUsage(THREE.DynamicDrawUsage);ice.frustumCulled=false;scene.add(ice);let seed=91232;function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
-const particles=[];for(let i=0;i<iceCount;i++){particles.push({x:(rand()-.5)*.85,y:(rand()-.5)*.020,z:(rand()-.5)*.85,size:.00010+Math.pow(rand(),5)*.0029,rot:rand()*TAU});const albedo=.55+rand()*.28;ice.setColorAt(i,new THREE.Color().setRGB(albedo*.95,albedo*.99,albedo));}
-const dummy=new THREE.Object3D();function updateIce(){const distance=eye.distanceTo(patch),close=distance<150;ice.visible=close;ringUniform.uHole.value=1-THREE.MathUtils.smoothstep(distance,1.8,30);ringUniform.uPatch.value.copy(patch);if(!close)return;ice.position.copy(patch).sub(eye);for(let i=0;i<iceCount;i++){const p=particles[i];const dz=-1.5*orbitalN*p.x*state.time;let z=((p.z+dz+.425)%.85+.85)%.85-.425;dummy.position.set(p.x,p.y+Math.sin(state.time*.002+p.rot)*.0005,z);dummy.rotation.set(p.rot+state.time*.0002,p.rot*.4,p.rot*.7);dummy.scale.set(p.size,p.size*.73,p.size*1.11);dummy.updateMatrix();ice.setMatrixAt(i,dummy.matrix);}ice.instanceMatrix.needsUpdate=true;}
-
-// Smaller unresolved ice particles fill the surrounding sheet without a solid nearby surface.
-const grainN=110000,grainPos=new Float32Array(grainN*3),grainSizes=new Float32Array(grainN);
-for(let i=0;i<grainN;i++){grainPos[i*3]=(rand()-.5)*4;grainPos[i*3+1]=(rand()-.5)*.022;grainPos[i*3+2]=(rand()-.5)*4;grainSizes[i]=.00035+Math.pow(rand(),3)*.0018;}
-const grainGeo=new THREE.BufferGeometry();grainGeo.setAttribute('position',new THREE.BufferAttribute(grainPos,3));grainGeo.setAttribute('size',new THREE.BufferAttribute(grainSizes,1));
+// Independent periodic near/far tiles avoid an advected pile-up around the observing anchor.
+const iceTime={value:0};iceMat.alphaHash=true;
+iceMat.onBeforeCompile=s=>{
+ s.uniforms.uIceTime=iceTime;
+ s.vertexShader='uniform float uIceTime;attribute float iceSpan;varying float vIceLod;\n'+s.vertexShader;
+ s.vertexShader=s.vertexShader.replace('#include <project_vertex>',`vec4 mvPosition=instanceMatrix*vec4(transformed,1.);
+float localZ=mod(instanceMatrix[3].z-1.5*${orbitalN.toFixed(12)}*instanceMatrix[3].x*uIceTime+iceSpan*.5,iceSpan)-iceSpan*.5;
+mvPosition.z+=localZ-instanceMatrix[3].z;
+vIceLod=iceSpan<1.?1.-smoothstep(.105,.15,max(abs(instanceMatrix[3].x),abs(localZ))):1.;
+mvPosition=modelViewMatrix*mvPosition;gl_Position=projectionMatrix*mvPosition;`);
+ s.fragmentShader='varying float vIceLod;\n'+s.fragmentShader;
+ s.fragmentShader=s.fragmentShader.replace('#include <alphahash_fragment>','diffuseColor.a*=vIceLod;\n#include <alphahash_fragment>');
+};
+const iceCount=26000,ice=new THREE.InstancedMesh(iceGeo,iceMat,iceCount);ice.frustumCulled=false;scene.add(ice);let seed=91232;function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
+const particles=[],dummy=new THREE.Object3D(),iceSpans=new Float32Array(iceCount);
+for(let i=0;i<iceCount;i++){
+ const near=i<18000,span=near?.30:8;
+ // Area-uniform sampling: r=sqrt(u), not u², whose surface density diverges at the origin.
+ const r=4*Math.sqrt(rand()),a=rand()*TAU,x=near?(rand()-.5)*span:r*Math.cos(a),z=near?(rand()-.5)*span:r*Math.sin(a);
+ // Coarse resolved sample of a declining size law (radius exponent 2.8); finer grains are separate.
+ const power=-1.8,lo=Math.pow(.00010,power),hi=Math.pow(.003,power),size=Math.pow(lo+rand()*(hi-lo),1/power);
+ const clearance=.005-size*1.25,y=((rand()+rand()+rand())/3-.5)*2*clearance;
+ const p={x,y,z,size,span,rot:rand()*TAU};particles.push(p);iceSpans[i]=span;
+ const albedo=.55+rand()*.28;ice.setColorAt(i,new THREE.Color().setRGB(albedo*.95,albedo*.99,albedo));
+ dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.rot,p.rot*.4,p.rot*.7);dummy.scale.set(p.size,p.size*.73,p.size*1.11);dummy.updateMatrix();ice.setMatrixAt(i,dummy.matrix);
+}
+iceGeo.setAttribute('iceSpan',new THREE.InstancedBufferAttribute(iceSpans,1));ice.instanceMatrix.needsUpdate=true;
+function updateIce(){const distance=eye.distanceTo(patch);ice.visible=distance<35;ringUniform.uHole.value=1-THREE.MathUtils.smoothstep(distance,.08,1.0);ringUniform.uPatch.value.copy(patch);ice.position.copy(patch).sub(eye);iceTime.value=state.time;}
+// Unresolved grains bridge the resolved particles and the far optical-depth ring sheet.
+const grainN=270000,grainPos=new Float32Array(grainN*3),grainSizes=new Float32Array(grainN),grainSpans=new Float32Array(grainN);
+for(let i=0;i<grainN;i++){const outer=i>=110000;if(outer){const a=rand()*TAU,r=2+30*Math.pow(rand(),.75);grainPos[i*3]=r*Math.cos(a);grainPos[i*3+2]=r*Math.sin(a);}else{grainPos[i*3]=(rand()-.5)*4;grainPos[i*3+2]=(rand()-.5)*4;}grainPos[i*3+1]=((rand()+rand()+rand())/3-.5)*.009;grainSizes[i]=.00004+Math.pow(rand(),3)*.00045;grainSpans[i]=outer?64:4;}
+const grainGeo=new THREE.BufferGeometry();grainGeo.setAttribute('position',new THREE.BufferAttribute(grainPos,3));grainGeo.setAttribute('size',new THREE.BufferAttribute(grainSizes,1));grainGeo.setAttribute('span',new THREE.BufferAttribute(grainSpans,1));
 const grainU={uHeight:{value:innerHeight},uTime:{value:0}};
-const grainMat=new THREE.ShaderMaterial({uniforms:grainU,transparent:true,depthWrite:false,vertexShader:`attribute float size;uniform float uHeight,uTime;varying float vLight;#include <logdepthbuf_pars_vertex>
-void main(){vec3 p=position;p.z=mod(p.z-1.5*.00013216*p.x*uTime+2.,4.)-2.;vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(size*uHeight*projectionMatrix[1][1]/max(.0001,-mv.z),.0,3.);vLight=.24+.34*fract(sin(position.x*91.+position.z*37.)*43758.);#include <logdepthbuf_vertex>}`,fragmentShader:`varying float vLight;#include <logdepthbuf_pars_fragment>
-void main(){#include <logdepthbuf_fragment>
-float r=length(gl_PointCoord-.5)*2.;if(r>1.)discard;gl_FragColor=vec4(vec3(.78,.82,.86)*vLight,(1.-smoothstep(.35,1.,r))*.8);}`});
+const grainMat=new THREE.ShaderMaterial({uniforms:grainU,transparent:true,depthWrite:false,vertexShader:`attribute float size,span;uniform float uHeight,uTime;varying float vLight,vCoverage;
+#include <logdepthbuf_pars_vertex>
+void main(){vec3 p=position;p.z=mod(p.z-1.5*${orbitalN.toFixed(12)}*p.x*uTime+span*.5,span)-span*.5;vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;float pixels=size*uHeight*projectionMatrix[1][1]/max(.0001,-mv.z);gl_PointSize=clamp(pixels,1.,3.);vCoverage=min(1.,pixels*pixels);vLight=.24+.34*fract(sin(position.x*91.+position.z*37.)*43758.);
+#include <logdepthbuf_vertex>
+}`,fragmentShader:`varying float vLight,vCoverage;
+#include <logdepthbuf_pars_fragment>
+void main(){
+#include <logdepthbuf_fragment>
+float r=length(gl_PointCoord-.5)*2.;if(r>1.)discard;gl_FragColor=vec4(vec3(.78,.82,.86)*vLight,(1.-smoothstep(.35,1.,r))*.8*vCoverage);}`});
 const grains=new THREE.Points(grainGeo,grainMat);grains.frustumCulled=false;scene.add(grains);
 
-// Log-depth chunks require Three's common helpers and their own preprocessor lines.
-scene.traverse(o=>{if(o.material?.isShaderMaterial){const m=o.material;m.vertexShader='#include <common>\n'+m.vertexShader;m.vertexShader=m.vertexShader.replace(/(#include <[^>]+>)/g,'\n$1\n');m.fragmentShader=m.fragmentShader.replace(/(#include <[^>]+>)/g,'\n$1\n');}});
-// A single render scene and a single camera: presets never exchange planet/spacecraft objects.
 const sunYaw=Math.atan2(Sun.x,Sun.z);
 function orbitShot(anchor,radius,yaw,pitch,roll=0,fov=38){const offset=V(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)).multiplyScalar(radius);let dir=offset.clone().normalize();let u=V(-Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch),-Math.cos(yaw)*Math.sin(pitch)).applyAxisAngle(dir,roll);return{eye:anchor.clone().add(offset),target:anchor.clone(),up:u,fov};}
 const classics={classic:{name:'土星',en:'SATURN',caption:'同一空间 · 真实天体比例',anchor:zero,distance:7.7*R,yaw:sunYaw+.7,pitch:.38,roll:-.20,limits:{yaw:Infinity,pitch:1.45,min:.65,max:7}},wide:{name:'土星系统',en:'SATURNIAN SYSTEM',caption:'19 颗主要卫星 · JPL 历史位置',anchor:zero,distance:18*R,yaw:sunYaw+.5,pitch:.5,roll:-.15,limits:{yaw:Infinity,pitch:1.4,min:.7,max:14}},cloud:{name:'云层近景',en:'CLOUD BANDS',caption:'局部镜头 · 偏转范围 ±12°',anchor:zero,distance:2.8*R,yaw:sunYaw+.25,pitch:.25,roll:-.14,limits:{yaw:.21,pitch:.14,min:.84,max:1.12}},ring:{name:'星环特写',en:'A / B / C RINGS',caption:'A 环外缘 136,780 km · 卡西尼缝 4,833 km',anchor:V(1.68*R,0,0).applyAxisAngle(V(0,1,0),-2.2),distance:1.65*R,yaw:-1.70,pitch:.19,roll:.16,limits:{yaw:.13,pitch:.08,min:.84,max:1.10}},edge:{name:'掠过环面',en:'RING PLANE',caption:'主环典型厚度约 5–30 m · 受限掠视',anchor:zero,distance:4.9*R,yaw:sunYaw+.5,pitch:-.024,roll:-.07,limits:{yaw:.17,pitch:.018,min:.9,max:1.1}},backlit:{name:'逆光星环',en:'BACKLIT RINGS',caption:'太阳真实方向 · 微小视直径',anchor:zero,distance:8.5*R,yaw:sunYaw+Math.PI+.18,pitch:-.34,roll:.12,limits:{yaw:.20,pitch:.12,min:.85,max:1.18}},hex:{name:'北极六边形',en:'NORTH POLAR HEXAGON',caption:'北极六边形急流 · 北半球受光',anchor:V(0,RP*.77,0),distance:1.65*R,yaw:sunYaw+.2,pitch:1.37,roll:0,limits:{yaw:.18,pitch:.12,min:.85,max:1.15}},aurora:{name:'土星极光',en:'PERSISTENT POLAR AURORA',caption:'常驻极光 · 数百至约 1,500 km 高 · 可见光长曝光',anchor:V(0,-RP*.95,0),distance:.63*R,yaw:sunYaw+2,pitch:-.14,roll:0,limits:{yaw:.16,pitch:.11,min:.85,max:1.2}},ice:{name:'环粒之间',en:'CO-ORBITING ICE',caption:'冰粒 0.2–6 m · 共轨观察 · 开普勒差速',anchor:patch,distance:.050,yaw:-1.1,pitch:.26,roll:-.06,fov:58,limits:{yaw:.28,pitch:.13,min:.70,max:1.65}}};
 const atmLon=sunYaw+1.17,atmLat=-3.5*DEG;const atmBase=V(Math.sin(atmLon)*R*Math.cos(atmLat),RP*Math.sin(atmLat),Math.cos(atmLon)*R*Math.cos(atmLat));const atmUp=V(atmBase.x/(R*R),atmBase.y/(RP*RP),atmBase.z/(R*R)).normalize();const atmEye=atmBase.clone().addScaledVector(atmUp,140);const atmNorth=V(-Math.sin(atmLon)*Math.sin(atmLat),Math.cos(atmLat),-Math.cos(atmLon)*Math.sin(atmLat)).normalize();
-classics.ring={...classics.ice,name:'星环冰原',en:'A RING / RESOLVED ICE',caption:'A 环 · 不规则水冰颗粒 · 共轨运动'};
+classics.ring={...classics.ice,limits:{...classics.ice.limits,yaw:Infinity,pitch:Infinity},name:'星环冰原',en:'A RING / RESOLVED ICE',caption:'A 环 · 不规则水冰颗粒 · 共轨运动'};
 function currentPreset(){if(classics[state.scene])return classics[state.scene];if(state.scene==='atmos')return{name:'大气仰望',en:'ABOVE THE CLOUDS',caption:'云顶上空 · 星环真实投影 · 参考纪录片构图',limits:{yaw:Infinity,pitch:Infinity,min:.85,max:1.1},cone:80*DEG};if(state.scene==='cassini')return{name:'卡西尼—惠更斯',en:'CASSINI / SOI PERIAPSIS',caption:'2004-07-01 02:39 UTC · 首次入轨近土点历史位置',anchor:cassiniPos,distance:.029,yaw:sunYaw+.8,pitch:.27,roll:.05,limits:{yaw:Infinity,pitch:Infinity,min:.72,max:2.3}};const b=bodies[state.scene];return{name:b.name,en:state.scene.toUpperCase(),caption:state.scene==='enceladus'?'南极冰粒喷流 · 细束与稀薄散射':state.scene==='titan'?'泰坦 · 橙色有机霾 · 半径 2,574.7 km':'真实比例 · 自由环绕 / 限制观测距离',anchor:state.scene==='enceladus'?b.position.clone().add(V(0,-65,0)):b.position,distance:b.radius*(state.scene==='enceladus'?5.8:4.4),yaw:sunYaw+.35,pitch:state.scene==='enceladus'?-.28:-.12,roll:-.1,limits:{yaw:Infinity,pitch:Infinity,min:.65,max:2.1}};}
 function destination(){const p=currentPreset();if(state.scene==='atmos'){const east=V().crossVectors(atmNorth,atmUp).normalize(),tilt=clamp(1.35+state.pitch,0,p.cone),azimuth=-1.318+state.yaw;const dir=coneDirection(atmUp,atmNorth,east,azimuth,tilt);const horizontal=atmNorth.clone().multiplyScalar(Math.cos(azimuth)).addScaledVector(east,Math.sin(azimuth));const u=atmUp.clone().multiplyScalar(Math.sin(tilt)).addScaledVector(horizontal,-Math.cos(tilt));return{eye:atmEye.clone(),target:atmEye.clone().addScaledVector(dir,500),up:u,fov:68/state.zoom};}let d=p.distance*state.zoom;if(innerWidth<700&&['classic','wide'].includes(state.scene))d*=Math.max(1,1.15/(innerWidth/innerHeight));return orbitShot(p.anchor,d,p.yaw+state.yaw,p.pitch+state.pitch,p.roll||0,p.fov||38);}
 
 let pose=destination();eye.copy(pose.eye);look.copy(pose.target);up.copy(pose.up);camera.fov=pose.fov;
-const obstacles=[{name:'Saturn',center:zero,axes:V(R+50,RP+50,R+50)},...Object.values(bodies).map(b=>({name:b.id,center:b.position,axes:V(b.radius*1.4,b.radius*1.4,b.radius*1.4)}))];
+const obstacles=[{name:'Saturn',center:zero,axes:V(R+50,RP+50,R+50)},...Object.values(bodies).map(b=>({name:b.id,center:b.position,axes:V(...Array(3).fill(b.maxRadius?b.maxRadius*1.08:b.radius*1.4))}))];
 function startMove(){const end=destination(),d1=Math.max(.003,Math.min(eye.distanceTo(look),eye.distanceTo(cassiniPos),eye.distanceTo(patch),...Object.values(bodies).map(b=>eye.distanceTo(b.position)))),d2=end.eye.distanceTo(end.target),margin=Math.min(1000,Math.max(50,Math.min((Math.hypot(eye.x/R,eye.y/RP,eye.z/R)-1)*R,(Math.hypot(end.eye.x/R,end.eye.y/RP,end.eye.z/R)-1)*R)*.45)),flightObstacles=obstacles.map((o,i)=>i===0?{...o,axes:V(R+margin,RP+margin,R+margin)}:o),route=planRoute(eye,end.eye,flightObstacles),scale=d=>Math.max(.01,d);const logs=Math.log1p(route.length/scale(d1))+Math.log1p(route.length/scale(d2));state.transit={start:performance.now(),duration:Math.min(15000,2400+logs*430),from:{eye:eye.clone(),target:look.clone(),up:up.clone(),q:orientation(eye,look,up),fov:camera.fov},end,route,d1,d2};$('travel').classList.add('show');}
 function selectShot(id){state.scene=id;state.yaw=0;state.pitch=0;state.zoom=1;startMove();updateUI();}
 function updateUI(){const p=currentPreset();$('sceneName').textContent=p.name;$('sceneEnglish').textContent=p.en;$('viewCaption').textContent=p.caption;$('sceneCategory').textContent=state.scene==='cassini'?'JPL / HISTORICAL POSITION':'SATURN / PHYSICAL SCALE';document.querySelector('.intro').style.display=['classic','wide'].includes(state.scene)?'':'none';$('iceDive').hidden=true;$('iceDive').textContent=state.scene==='ice'?'返回星环特写 ↑':'下潜至冰粒之间 ↓';$('back').classList.toggle('show',state.scene!=='classic');document.querySelectorAll('[data-shot]').forEach(b=>{const on=b.dataset.shot===state.scene;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on);});$('moonSelect').value=bodies[state.scene]?state.scene:'';$('viewCaption').classList.toggle('restricted',!['classic','wide'].includes(state.scene));}
@@ -177,9 +206,9 @@ function updateSolarFlare(){const local=Sun.clone().applyQuaternion(camera.quate
 
 let last=performance.now();function animate(now){requestAnimationFrame(animate);if(document.hidden){last=now;return;}let dt=Math.min(.05,(now-last)/1000);last=now;if(state.playing)state.time+=dt*state.speed;updateCamera(now,dt);state.styleBlend=Math.min(1,state.styleBlend+dt*2.5);postU.uStyle.value=state.style;postU.uPrevious.value=state.oldStyle;postU.uBlend.value=state.styleBlend;
 worldObjects.forEach(o=>o.object.position.copy(o.position).sub(eye));saturnRoot.rotation.y=state.time*TAU/(10.656*3600);light.position.copy(Sun).multiplyScalar(1000000);light.target.position.set(0,0,0);for(const u of uniformsToUpdate)u.uSimTime.value=state.time;
-auroraUniform.uTime.value=state.time;auroraUniform.uGain.value=state.scene==='aurora'?2:1;plumeMaterials.forEach(m=>m.uniforms.uT.value=state.time);updateIce();grains.visible=ice.visible;grains.position.copy(patch).sub(eye);grainU.uTime.value=state.time;grainU.uHeight.value=renderer.domElement.height;const rot=new THREE.Matrix3().setFromMatrix4(camera.matrixWorld);skyU.uRot.value.copy(rot);postU.uRot.value.copy(rot);const tan=Math.tan(camera.fov*DEG*.5);skyU.uTan.value=tan;postU.uTan.value=tan;skyU.uGalaxy.value=state.galaxy?1:0;postU.uUp.value.copy(V(eye.x/(R*R),eye.y/(RP*RP),eye.z/(R*R)).normalize());let ell=Math.sqrt((eye.x/R)**2+(eye.y/RP)**2+(eye.z/R)**2);postU.uAltitude.value=(ell-1)*R;postU.uTime.value=state.time;postU.uExposure.value=state.scene==='hex'?1.2:state.scene==='aurora'?1.55:state.scene==='atmos'?.95:1.2;
+auroraUniform.uTime.value=state.time;auroraUniform.uGain.value=state.scene==='aurora'?2:1;plumeMaterials.forEach(m=>m.uniforms.uT.value=state.time);updateIce();grains.visible=eye.distanceTo(patch)<80;grains.position.copy(patch).sub(eye);grainU.uTime.value=state.time;grainU.uHeight.value=renderer.domElement.height;const rot=new THREE.Matrix3().setFromMatrix4(camera.matrixWorld);skyU.uRot.value.copy(rot);postU.uRot.value.copy(rot);const tan=Math.tan(camera.fov*DEG*.5);skyU.uTan.value=tan;postU.uTan.value=tan;skyU.uGalaxy.value=state.galaxy?1:0;postU.uUp.value.copy(V(eye.x/(R*R),eye.y/(RP*RP),eye.z/(R*R)).normalize());let ell=Math.sqrt((eye.x/R)**2+(eye.y/RP)**2+(eye.z/R)**2);postU.uAltitude.value=(ell-1)*R;postU.uTime.value=state.time;postU.uExposure.value=state.scene==='hex'?1.2:state.scene==='aurora'?1.55:state.scene==='atmos'?.95:1.2;
 updateSolarFlare();updateRingGuide();renderer.setRenderTarget(rt);renderer.clear();renderer.render(screenScene,screenCamera);renderer.clearDepth();renderer.render(scene,camera);renderer.setRenderTarget(null);renderer.clear();renderer.render(postScene,screenCamera);updateLabels();$('loading').classList.add('hide');const range=eye.distanceTo(currentPreset().anchor||atmEye);$('range').textContent=range<1?(range*1000).toFixed(1)+' m':Math.round(range).toLocaleString()+' km';}
-await renderer.compileAsync(scene,camera);scene.traverse(o=>{if(o.material){for(const m of(Array.isArray(o.material)?o.material:[o.material]))for(const k of ['map','normalMap','roughnessMap','metalnessMap'])if(m[k])renderer.initTexture(m[k]);}});requestAnimationFrame(animate);updateUI();
+prepareShaderMaterials(scene,screenScene,postScene);await renderer.compileAsync(scene,camera);scene.traverse(o=>{if(o.material){for(const m of(Array.isArray(o.material)?o.material:[o.material]))for(const k of ['map','normalMap','roughnessMap','metalnessMap'])if(m[k])renderer.initTexture(m[k]);}});requestAnimationFrame(animate);updateUI();
 let toastTimer;function toast(t){$('toast').textContent=t;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),2000);}
 document.querySelectorAll('[data-shot]').forEach(b=>b.onclick=()=>selectShot(b.dataset.shot));document.querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{state.oldStyle=state.style;state.style=+b.dataset.style;state.styleBlend=0;document.querySelectorAll('[data-style]').forEach(x=>{let active=+x.dataset.style===state.style;x.classList.toggle('active',active);x.setAttribute('aria-pressed',active);});});
 $('back').onclick=()=>selectShot('classic');$('reset').onclick=()=>selectShot(state.scene);$('universe').ondblclick=()=>selectShot(state.scene);$('iceDive').onclick=()=>selectShot(state.scene==='ice'?'ring':'ice');$('moonSelect').onchange=e=>{if(e.target.value)selectShot(e.target.value);};
@@ -193,4 +222,4 @@ $('universe').addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))r
 addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)||$('about').open)return;if(e.key.toLowerCase()==='h')document.body.classList.toggle('clean');if(e.key==='Escape')document.body.classList.remove('clean');if(e.code==='Space'&&document.activeElement.tagName!=='BUTTON'){e.preventDefault();play();}if(e.key==='ArrowLeft')adjust(.04,0);if(e.key==='ArrowRight')adjust(-.04,0);if(e.key==='ArrowUp')adjust(0,.03);if(e.key==='ArrowDown')adjust(0,-.03);});
 $('universe').addEventListener('webglcontextlost',e=>{e.preventDefault();$('loading').classList.remove('hide');$('loading').textContent='图形连接中断，请刷新页面。';});
 // Read-only diagnostics are presented in the page so navigation limits and physical data are inspectable.
-function diagnostics(){let p=currentPreset();$('diagnostics').textContent=JSON.stringify({version:3,shot:state.scene,inTransit:!!state.transit,yaw:state.yaw,pitch:state.pitch,zoom:state.zoom,limits:p.limits,eye:eye.toArray(),target:look.toArray(),sun:Sun.toArray(),saturnRadiusKm:R,polarRadiusKm:RP,ringOuterKm:136780,moonCount:moonSpecs.length,cassiniRadiusKm:cassiniPos.length(),epoch:'2004-07-01T02:39:00Z',lighting:'v1-art-directed',coneHalfAngle:currentPreset().cone||null,craftDistance:eye.distanceTo(cassiniPos),routeLength:state.transit?.route.length||0},null,2);requestAnimationFrame(diagnostics);}diagnostics();
+function diagnostics(){let p=currentPreset();$('diagnostics').textContent=JSON.stringify({version:"3.1",moonModelKinds:Object.fromEntries(Object.entries(bodies).map(([id,b])=>[id,b.object.userData.modelKind])),iceFieldWidthKm:8,outerParticleWidthKm:64,ringLayerThicknessM:10,ringParticleDistribution:"uniform-area / periodic LOD tiles",shot:state.scene,inTransit:!!state.transit,yaw:state.yaw,pitch:state.pitch,zoom:state.zoom,limits:p.limits,eye:eye.toArray(),target:look.toArray(),sun:Sun.toArray(),saturnRadiusKm:R,polarRadiusKm:RP,ringOuterKm:136780,moonCount:moonSpecs.length,cassiniRadiusKm:cassiniPos.length(),epoch:'2004-07-01T02:39:00Z',lighting:'v1-art-directed',coneHalfAngle:currentPreset().cone||null,craftDistance:eye.distanceTo(cassiniPos),routeLength:state.transit?.route.length||0},null,2);requestAnimationFrame(diagnostics);}diagnostics();

@@ -13,3 +13,10 @@
 使用说明、第三版说明和第一版预览也按原样保留。最新版入口是根目录 `index.html`。
 历史 HTML 保留当时的行为和说明，不保证具有最新版修复；第三方许可同样见根目录 THIRD_PARTY_NOTICES.md。
 这些是已存在文件的快照，并非补造的旧 Git 提交。后续可给实际提交添加版本标签。
+
+## 正式发布标签
+
+- [v3.0.0 发布时的完整目录](https://github.com/Rurushi-mo/saturn-observatory/tree/v3.0.0)
+- [v3.0.0 离线 HTML](https://github.com/Rurushi-mo/saturn-observatory/raw/refs/tags/v3.0.0/index.html)
+
+3.1 更新保留以上历史文件与既有 Git 提交、标签。

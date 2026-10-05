@@ -19,31 +19,132 @@
       "retrievedOn": "2026-09-28"
     },
     {
-      "name": "enceladus",
-      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
-      "sourcePage": "https://science.nasa.gov/resource/enceladus-3d-model/",
-      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/e/Enceladus_1_504.glb",
-      "sourceFileSHA256": "7548234bae15047d6c1af6bec4f348748b1acae7d4e7bfbe50e5bb3dda75506f",
-      "use": "Recompressed model and/or extracted texture maps embedded in assets/embedded.json",
-      "retrievedOn": "2026-09-28"
-    },
-    {
       "name": "mimas",
-      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
       "sourcePage": "https://science.nasa.gov/resource/mimas-3d-model/",
       "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/m/Mimas_1_1000.glb",
+      "bytes": 6409400,
       "sourceFileSHA256": "66fc9c4b5f89313afa1a8214763525232608e37560044a614eb7cfaa876c47b1",
-      "use": "Recompressed model and/or extracted texture maps embedded in assets/embedded.json",
-      "retrievedOn": "2026-09-28"
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "retrievedOn": "2026-10-04",
+      "packedBytes": 518832,
+      "type": "NASA-VTAD-model",
+      "axesKm": [
+        207.8,
+        196.7,
+        190.6
+      ]
+    },
+    {
+      "name": "enceladus",
+      "sourcePage": "https://science.nasa.gov/resource/enceladus-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/e/Enceladus_1_504.glb",
+      "bytes": 17925448,
+      "sourceFileSHA256": "7548234bae15047d6c1af6bec4f348748b1acae7d4e7bfbe50e5bb3dda75506f",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "retrievedOn": "2026-10-04",
+      "packedBytes": 1402480,
+      "type": "NASA-VTAD-model",
+      "axesKm": [
+        256.6,
+        251.4,
+        248.3
+      ]
+    },
+    {
+      "name": "tethys",
+      "sourcePage": "https://science.nasa.gov/resource/tethys-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/t/Tethys_1_1077-1.glb",
+      "bytes": 15431660,
+      "sourceFileSHA256": "5e195fa1faf454f7af6808d74a9416b0f97321536a0fcacc5687c0428a9d8659",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "retrievedOn": "2026-10-04",
+      "packedBytes": 1418908,
+      "type": "NASA-VTAD-model",
+      "axesKm": [
+        538.4,
+        528.3,
+        526.3
+      ]
+    },
+    {
+      "name": "dione",
+      "sourcePage": "https://science.nasa.gov/resource/dione-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/d/Dione_1_1123.glb",
+      "bytes": 18048520,
+      "sourceFileSHA256": "9feee62be971d47ef55448e58304072e89d973c3a3454c812314e1f9dca27674",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "retrievedOn": "2026-10-04",
+      "packedBytes": 1319496,
+      "type": "NASA-VTAD-model",
+      "axesKm": [
+        563.4,
+        561.3,
+        559.6
+      ]
+    },
+    {
+      "name": "rhea",
+      "sourcePage": "https://science.nasa.gov/resource/rhea-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/r/Rhea_1_1529.glb",
+      "bytes": 16232384,
+      "sourceFileSHA256": "9cb351462fdc149303de79f9b8e33fb3deb9ce60102a190876a7ad280f307d57",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "retrievedOn": "2026-10-04",
+      "packedBytes": 1487860,
+      "type": "NASA-VTAD-model",
+      "axesKm": [
+        765.0,
+        763.1,
+        762.4
+      ]
     },
     {
       "name": "titan",
-      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
       "sourcePage": "https://science.nasa.gov/resource/titan-3d-model/",
       "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/t/Titan_1_5150.glb",
+      "bytes": 686348,
       "sourceFileSHA256": "9e92e30902a26130895bf2558172d7f36186eb4a51368a60bc3ec1d01134fde4",
-      "use": "Recompressed model and/or extracted texture maps embedded in assets/embedded.json",
-      "retrievedOn": "2026-09-28"
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "retrievedOn": "2026-10-04",
+      "packedBytes": 484624,
+      "type": "NASA-VTAD-model",
+      "axesKm": [
+        2575.15,
+        2574.78,
+        2574.47
+      ]
+    },
+    {
+      "name": "hyperion",
+      "sourcePage": "https://science.nasa.gov/resource/hyperion-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/h/Hyperion_1_1000.glb",
+      "bytes": 1289188,
+      "sourceFileSHA256": "2d30d16901886b41f06288b014d83df85dd1cf32a5ae1fa525f02faf6f978687",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "retrievedOn": "2026-10-04",
+      "packedBytes": 526236,
+      "type": "NASA-VTAD-model",
+      "axesKm": [
+        180.1,
+        133.0,
+        102.7
+      ]
+    },
+    {
+      "name": "iapetus",
+      "sourcePage": "https://science.nasa.gov/resource/iapetus-3d-model/",
+      "downloadUrl": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/i/Iapetus_1_1471.glb",
+      "bytes": 11755660,
+      "sourceFileSHA256": "7a7212ac69e022cf37ae96fe4d34f04e9cfea00fd66a266aa3b1c970c475746d",
+      "credit": "NASA Visualization Technology Applications and Development (VTAD)",
+      "retrievedOn": "2026-10-04",
+      "packedBytes": 1055024,
+      "type": "NASA-VTAD-model",
+      "axesKm": [
+        745.7,
+        745.7,
+        712.1
+      ]
     }
   ],
   "ephemeris": {
@@ -56,5 +157,7 @@
     "mapping": "Horizons (x,y,z) -> scene (x,z,-y)",
     "rawResponses": "assets/horizons/"
   },
-  "usageGuidelines": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
+  "usageGuidelines": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+  "moonCatalog": "assets/moon-sources.json",
+  "shapeReference": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc"
 }

@@ -6,7 +6,7 @@
 
 来源署名：NASA Visualization Technology Applications and Development (VTAD)。
 使用了以下页面提供的 glTF 模型或从模型提取的贴图；具体原始下载地址与 SHA-256 见 assets/sources.json。
-模型纹理经过缩小、JPEG/PNG 重编码；卡西尼、土星、米玛斯的模型经过重新打包。未声称拥有原始素材版权。
+模型纹理经过缩小、JPEG/PNG 重编码；卡西尼、土星及 8 颗主要卫星的模型经过重新打包。未声称拥有原始素材版权。
 
 - cassini: https://science.nasa.gov/resource/cassini-3d-model/
 - saturn: https://science.nasa.gov/resource/saturn-3d-model/
@@ -14,9 +14,31 @@
 - mimas: https://science.nasa.gov/resource/mimas-3d-model/
 - titan: https://science.nasa.gov/resource/titan-3d-model/
 
+- tethys: https://science.nasa.gov/resource/tethys-3d-model/
+- dione: https://science.nasa.gov/resource/dione-3d-model/
+- rhea: https://science.nasa.gov/resource/rhea-3d-model/
+- hyperion: https://science.nasa.gov/resource/hyperion-3d-model/
+- iapetus: https://science.nasa.gov/resource/iapetus-3d-model/
+
+3.1 版额外处理：8 颗主要卫星均使用自己的 NASA 模型与贴图。贴图缩至不超过 2048×1024，并按 JPL 三轴尺寸规范整体尺度。
+11 颗小卫星分别程序重建：Phoebe、Janus、Epimetheus、Helene、Telesto、Calypso、Atlas、Prometheus、Pandora、Pan、Daphnis。
+这些重建的形状与地貌由本项目生成，非实测表面地图；三轴尺寸采用以下 SPICE 内核，赤道脊和地貌形态参考对应 NASA 土星卫星介绍页面。
+- SPICE PCK: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc
+- Satellite characteristics: https://ssd.jpl.nasa.gov/sats/phys_par/
+- Moon overview: https://science.nasa.gov/saturn/moons/
+- Individual sources and raw model hashes: assets/moon-sources.json
+
 使用条件：https://www.nasa.gov/nasa-brand-center/images-and-media/
 NASA 素材通常可用于科普与信息展示，应保留来源署名；若个别资源另有第三方版权标识，则遵守其单独条款。NASA 标识及商标不包含在本项目 MIT 授权内。
 本项目使用 AI 辅助开发。渲染结果与说明由本项目负责，不代表 NASA/JPL 的官方产品、审核、认可或背书。
+
+## Ring-particle visualization references
+
+- Main-ring thickness and particle composition: https://science.nasa.gov/mission/cassini/faq/
+- Local exceptional vertical structures at the outer B ring: https://science.nasa.gov/resource/the-tallest-peaks-2/
+- Self-gravity wakes (not simulated here): https://arxiv.org/abs/0911.3161
+
+本项目所示 A 环位置采用典型约 10 m 的薄层，不将 B 环外缘的特殊高峰复制到此处。0.2–6 m 直径的立体冰粒为粗颗粒展示样本；粒径递减律、细节层采样密度及渐隐距离为可视化参数，未宣称精确复现该位置的实测粒子数量、光学深度、碰撞或自引力尾迹。
 
 ## Ephemerides and scientific references
 
@@ -28,7 +50,7 @@ NASA 素材通常可用于科普与信息展示，应保留来源署名；若个
 - Visible aurora reference: https://arxiv.org/abs/1506.00664
 
 原始星历响应保留在 assets/horizons/。位置转换结果位于 assets/ephemeris.json。
-云形、银河、冰粒分布、部分卫星表面及光学曝光为程序重建；纪录片仅为构图参考，本仓库不包含纪录片截图或片段。
+云形、银河、冰粒分布、11 颗小卫星表面及光学曝光为程序重建；纪录片仅为构图参考，本仓库不包含纪录片截图或片段。
 
 ## Three.js 0.180.0 — MIT
 

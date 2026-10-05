@@ -1,0 +1,10 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import * as THREE from 'three';
+const s=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),V=(...a)=>new THREE.Vector3(...a),ep=JSON.parse(fs.readFileSync(new URL('../assets/ephemeris.json',import.meta.url))),specs=JSON.parse(s.match(/const moonSpecs=(\[\[.*?\]\]);/)[1].replaceAll("'",'"'));
+const state={scene:'ring',yaw:0,pitch:0,zoom:1,transit:null};const c=vm.createContext({THREE,V,state,R:60268,RP:54364,DEG:Math.PI/180,Sun:V(-.619,.433,.655).normalize(),zero:V(),patch:V(129500,0,0),cassiniPos:V(...ep.cassini.position),bodies:Object.fromEntries(specs.map(([id,name,radius])=>[id,{id,name,radius,position:V(...ep[id].position)}])),eye:V(),look:V(),up:V(0,1,0),camera:new THREE.PerspectiveCamera(),innerWidth:1440,innerHeight:900,clamp:THREE.MathUtils.clamp,mix:THREE.MathUtils.lerp,$(){return{};},document:{querySelector(){return{style:{}};},querySelectorAll(){return[];}}});
+vm.runInContext(s.slice(s.indexOf('const sunYaw='),s.indexOf('// Direction-fixed star field')),c);
+vm.runInContext(s.slice(s.indexOf('function adjust('),s.indexOf("$('universe').addEventListener('pointerdown'")),c);
+vm.runInContext('adjust(8,5)',c);assert.ok(Math.abs(state.yaw)>6,'Ring view must allow a full orbit');assert.ok(state.pitch>4,'Ring view must be free to orbit vertically');
+const p=vm.runInContext('currentPreset()',c);assert.ok(Number.isFinite(p.limits.min)&&Number.isFinite(p.limits.max));
+state.yaw=Math.PI/2-p.yaw;state.pitch=-p.pitch;
+const dest=vm.runInContext('destination()',c),toward=dest.target.clone().sub(dest.eye).normalize(),saturn=dest.eye.clone().negate().normalize();assert.ok(toward.dot(saturn)>.999999,'Orbit must turn the camera toward Saturn itself');
+console.log(JSON.stringify({passed:true,fullRingOrbit:true,canFaceSaturn:true,zoomBounds:[p.limits.min,p.limits.max]}));
