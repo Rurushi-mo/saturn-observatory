@@ -62,7 +62,7 @@
 
 ## 发布状态与限制
 
-本记录是本地验收，不代表 3.1 已上线。GitHub 与 Pages 的同步需项目所有者确认后执行，并另行记录远端部署及文件一致性结果。
+以上为本地验收；项目所有者确认后已完成公网发布，远端复核结果见下文。
 
 本机 Windows / Node.js 24.15.0 检测通过，不代表所有浏览器、移动设备和 GPU 的兼容性。粒子与小卫星重建属于科普近似；原历史快照保持原样，本次结果只适用于 3.1。
 
@@ -72,3 +72,16 @@
 SHA-256(index.html)
 036ef562572efc9abbc635dc9a05239afe60e2377a01476e4f6579560f95f138
 ```
+
+## 公网发布复核 — 2026-10-05
+
+项目所有者确认上传同步后，3.1 已提交至 [GitHub 项目](https://github.com/Rurushi-mo/saturn-observatory) 并发布到 [在线观测站](https://rurushi-mo.github.io/saturn-observatory/)。
+
+- 发布提交：`0cb26258ac3bb02894001a33cad9520291917d98`；保留 [v3.1.0 标签](https://github.com/Rurushi-mo/saturn-observatory/tree/v3.1.0)。
+- [Pages 发布任务 37264985782](https://github.com/Rurushi-mo/saturn-observatory/actions/runs/37264985782) 成功；Pages API 返回 built，提交与发布提交一致，错误为空。
+- 分别下载主分支、v3.1.0 标签及 Pages 首页：均为 HTTP 200、15,271,645 字节，SHA-256 均与上述本地网页一致。
+- 公网历史清单与本地清单一致，7 个原始历史文件及 v3.0.0 标签保留。
+- 实际浏览器载入 3.1，复核星环自由环绕及回望土星，检查期间无控制台错误或警告。
+- 发布后的补充提交只更新本记录、版本存档链接及公网截图，网页和渲染算法保持一致。
+
+![公网 3.1 星环特写回望土星](images/public-v3.1.png)

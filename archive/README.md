@@ -20,3 +20,6 @@
 - [v3.0.0 离线 HTML](https://github.com/Rurushi-mo/saturn-observatory/raw/refs/tags/v3.0.0/index.html)
 
 3.1 更新保留以上历史文件与既有 Git 提交、标签。
+
+- [v3.1.0 发布时的完整目录](https://github.com/Rurushi-mo/saturn-observatory/tree/v3.1.0)
+- [v3.1.0 离线 HTML](https://github.com/Rurushi-mo/saturn-observatory/raw/refs/tags/v3.1.0/index.html)
