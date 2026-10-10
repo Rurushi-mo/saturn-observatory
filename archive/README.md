@@ -23,3 +23,8 @@
 
 - [v3.1.0 发布时的完整目录](https://github.com/Rurushi-mo/saturn-observatory/tree/v3.1.0)
 - [v3.1.0 离线 HTML](https://github.com/Rurushi-mo/saturn-observatory/raw/refs/tags/v3.1.0/index.html)
+
+- [v3.1.2 发布时的完整目录](https://github.com/Rurushi-mo/saturn-observatory/tree/v3.1.2)
+- [v3.1.2 离线 HTML](https://github.com/Rurushi-mo/saturn-observatory/raw/refs/tags/v3.1.2/index.html)
+
+v3.1.2 合并星环边界与大气遮挡修正；3.1.1 是本地中间版本，没有独立发布标签。

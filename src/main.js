@@ -106,11 +106,12 @@ anchored(jets,bodies.enceladus.position).renderOrder=5;
 // NASA's detailed Cassini-Huygens geometry is kept at metre scale, including the carried probe.
 const cassini=await model(A.cassini);cassini.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(cassini);const dims=box.getSize(V());const center=box.getCenter(V());cassini.position.sub(center);const craft=new THREE.Group();craft.add(cassini);craft.scale.setScalar(.011/Math.max(dims.x,dims.y,dims.z));
 cassini.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.material.envMap=env;o.material.envMapIntensity=.33;o.material.roughness=Math.max(.35,o.material.roughness||.5);}});const cassiniPos=V(...ep.cassini.position);anchored(craft,cassiniPos);craft.rotation.set(.2,-.7,.25);
-// Locally resolved ring particles: 8 km across, with a 64 km surrounding sheet.
+// Locally resolved ring particles: 16 km across, with a 128 km surrounding sheet.
 const patch=V(129500,0,0),patchRadius=129500,orbitalN=Math.sqrt(MU/Math.pow(patchRadius,3));
 const iceGeo=new THREE.IcosahedronGeometry(1,1);let pos=iceGeo.attributes.position;for(let i=0;i<pos.count;i++){let v=V().fromBufferAttribute(pos,i);v.multiplyScalar(.78+.24*Math.sin(v.x*29+v.y*17+v.z*11));pos.setXYZ(i,v.x,v.y,v.z);}iceGeo.computeVertexNormals();
 const iceMat=new THREE.MeshStandardMaterial({color:0xc5cbd0,roughness:.77,metalness:.02,envMap:env,envMapIntensity:.035});
-// Independent periodic near/far tiles avoid an advected pile-up around the observing anchor.
+// Continuously sized circular footprints avoid square LOD boundaries and discrete density steps.
+// Wrapping along each disk's chord preserves its area-uniform distribution under Kepler shear.
 const iceTime={value:0};iceMat.alphaHash=true;
 iceMat.onBeforeCompile=s=>{
  s.uniforms.uIceTime=iceTime;
@@ -118,17 +119,17 @@ iceMat.onBeforeCompile=s=>{
  s.vertexShader=s.vertexShader.replace('#include <project_vertex>',`vec4 mvPosition=instanceMatrix*vec4(transformed,1.);
 float localZ=mod(instanceMatrix[3].z-1.5*${orbitalN.toFixed(12)}*instanceMatrix[3].x*uIceTime+iceSpan*.5,iceSpan)-iceSpan*.5;
 mvPosition.z+=localZ-instanceMatrix[3].z;
-vIceLod=iceSpan<1.?1.-smoothstep(.105,.15,max(abs(instanceMatrix[3].x),abs(localZ))):1.;
+vIceLod=1.-smoothstep(6.,8.,length(vec2(instanceMatrix[3].x,localZ)));
 mvPosition=modelViewMatrix*mvPosition;gl_Position=projectionMatrix*mvPosition;`);
  s.fragmentShader='varying float vIceLod;\n'+s.fragmentShader;
  s.fragmentShader=s.fragmentShader.replace('#include <alphahash_fragment>','diffuseColor.a*=vIceLod;\n#include <alphahash_fragment>');
 };
-const iceCount=26000,ice=new THREE.InstancedMesh(iceGeo,iceMat,iceCount);ice.frustumCulled=false;scene.add(ice);let seed=91232;function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
+const iceCount=44000,ice=new THREE.InstancedMesh(iceGeo,iceMat,iceCount);ice.frustumCulled=false;scene.add(ice);let seed=91232;function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
 const particles=[],dummy=new THREE.Object3D(),iceSpans=new Float32Array(iceCount);
 for(let i=0;i<iceCount;i++){
- const near=i<18000,span=near?.30:8;
- // Area-uniform sampling: r=sqrt(u), not u², whose surface density diverges at the origin.
- const r=4*Math.sqrt(rand()),a=rand()*TAU,x=near?(rand()-.5)*span:r*Math.cos(a),z=near?(rand()-.5)*span:r*Math.sin(a);
+ // Mixing log-uniform disk radii gives a continuous radial density, flat at the centre.
+ // Each individual disk remains area-uniform, preventing the former central pile-up.
+ const footprint=.20*Math.pow(40,rand()),r=footprint*Math.sqrt(rand()),a=rand()*TAU,x=r*Math.cos(a),z=r*Math.sin(a),span=2*Math.sqrt(Math.max(1e-12,footprint*footprint-x*x));
  // Coarse resolved sample of a declining size law (radius exponent 2.8); finer grains are separate.
  const power=-1.8,lo=Math.pow(.00010,power),hi=Math.pow(.003,power),size=Math.pow(lo+rand()*(hi-lo),1/power);
  const clearance=.005-size*1.25,y=((rand()+rand()+rand())/3-.5)*2*clearance;
@@ -139,13 +140,13 @@ for(let i=0;i<iceCount;i++){
 iceGeo.setAttribute('iceSpan',new THREE.InstancedBufferAttribute(iceSpans,1));ice.instanceMatrix.needsUpdate=true;
 function updateIce(){const distance=eye.distanceTo(patch);ice.visible=distance<35;ringUniform.uHole.value=1-THREE.MathUtils.smoothstep(distance,.08,1.0);ringUniform.uPatch.value.copy(patch);ice.position.copy(patch).sub(eye);iceTime.value=state.time;}
 // Unresolved grains bridge the resolved particles and the far optical-depth ring sheet.
-const grainN=270000,grainPos=new Float32Array(grainN*3),grainSizes=new Float32Array(grainN),grainSpans=new Float32Array(grainN);
-for(let i=0;i<grainN;i++){const outer=i>=110000;if(outer){const a=rand()*TAU,r=2+30*Math.pow(rand(),.75);grainPos[i*3]=r*Math.cos(a);grainPos[i*3+2]=r*Math.sin(a);}else{grainPos[i*3]=(rand()-.5)*4;grainPos[i*3+2]=(rand()-.5)*4;}grainPos[i*3+1]=((rand()+rand()+rand())/3-.5)*.009;grainSizes[i]=.00004+Math.pow(rand(),3)*.00045;grainSpans[i]=outer?64:4;}
+const grainN=320000,grainPos=new Float32Array(grainN*3),grainSizes=new Float32Array(grainN),grainSpans=new Float32Array(grainN);
+for(let i=0;i<grainN;i++){const footprint=.60*Math.pow(64/.60,rand()),r=footprint*Math.sqrt(rand()),a=rand()*TAU,x=r*Math.cos(a);grainPos[i*3]=x;grainPos[i*3+2]=r*Math.sin(a);grainSpans[i]=2*Math.sqrt(Math.max(1e-12,footprint*footprint-x*x));grainPos[i*3+1]=((rand()+rand()+rand())/3-.5)*.009;grainSizes[i]=.00004+Math.pow(rand(),3)*.00045;}
 const grainGeo=new THREE.BufferGeometry();grainGeo.setAttribute('position',new THREE.BufferAttribute(grainPos,3));grainGeo.setAttribute('size',new THREE.BufferAttribute(grainSizes,1));grainGeo.setAttribute('span',new THREE.BufferAttribute(grainSpans,1));
 const grainU={uHeight:{value:innerHeight},uTime:{value:0}};
 const grainMat=new THREE.ShaderMaterial({uniforms:grainU,transparent:true,depthWrite:false,vertexShader:`attribute float size,span;uniform float uHeight,uTime;varying float vLight,vCoverage;
 #include <logdepthbuf_pars_vertex>
-void main(){vec3 p=position;p.z=mod(p.z-1.5*${orbitalN.toFixed(12)}*p.x*uTime+span*.5,span)-span*.5;vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;float pixels=size*uHeight*projectionMatrix[1][1]/max(.0001,-mv.z);gl_PointSize=clamp(pixels,1.,3.);vCoverage=min(1.,pixels*pixels);vLight=.24+.34*fract(sin(position.x*91.+position.z*37.)*43758.);
+void main(){vec3 p=position;p.z=mod(p.z-1.5*${orbitalN.toFixed(12)}*p.x*uTime+span*.5,span)-span*.5;vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;float pixels=size*uHeight*projectionMatrix[1][1]/max(.0001,-mv.z);gl_PointSize=clamp(pixels,1.,3.);vCoverage=min(1.,pixels*pixels)*(1.-smoothstep(48.,64.,length(p.xz)));vLight=.24+.34*fract(sin(position.x*91.+position.z*37.)*43758.);
 #include <logdepthbuf_vertex>
 }`,fragmentShader:`varying float vLight,vCoverage;
 #include <logdepthbuf_pars_fragment>
@@ -177,16 +178,22 @@ const skyMat=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms
 void main(){vec2 p=(vUv-.5)*2.;vec3 rd=normalize(uRot*vec3(p.x*uAspect*uTan,p.y*uTan,-1.));vec3 c=vec3(.0005,.0007,.0012);vec3 gn=normalize(vec3(.35,.8,-.42));float lat=dot(rd,gn),band=exp(-pow(abs(lat)*8.5,1.5));float n=fbm3(rd*8.),fine=fbm3(rd*53.),dust=fbm3(rd*19.+vec3(4,2,8));float lane=exp(-pow((lat+(dust-.5)*.08)*33.,2.));float core=pow(max(0.,dot(rd,normalize(vec3(.91,-.41,0)))),15.);vec3 milky=mix(vec3(.20,.29,.48),vec3(.68,.55,.38),clamp(core+n*.3,0.,1.));c+=uGalaxy*band*(.018+n*.055+core*.045)*milky*(1.-lane*.76)*( .58+fine*.85);
 for(int layer=0;layer<2;layer++){float density=layer==0?310.:730.;vec3 cell=floor(rd*density),f=fract(rd*density)-.5;float h=hash3(cell+float(layer)*71.);vec3 jitter=vec3(hash3(cell+2.),hash3(cell+8.),hash3(cell+13.))*.58-.29;vec3 delta=f-jitter;float dist2=dot(delta,delta);float point=exp(-dist2*(layer==0?130.:170.))*step(layer==0?.975:.991,h);vec3 color=mix(vec3(.49,.68,1.),vec3(1.,.73,.45),hash3(cell+5.));c+=point*color*(layer==0?.48:.18);}
 float angle=length(cross(rd,uSun)),front=step(0.,dot(rd,uSun));float px=max(.0001,uTan/uResolution.y);float disk=(1.-smoothstep(.00048-px,.00051+px,angle))*front;float glow=.000006/(angle*angle+.000011)*front;float corona=exp(-angle*65.)*.045*front;float rays=(pow(abs(sin(atan(p.y,p.x)*3.)),28.)*.015)*exp(-angle*70.)*front;c+=vec3(1.,.85,.60)*(disk*16.+glow+corona+rays);gl_FragColor=vec4(c,1.);}`});screenScene.add(new THREE.Mesh(quadGeo,skyMat));
-const rt=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:true});rt.samples=4;
-const postScene=new THREE.Scene();const postU={tScene:{value:rt.texture},uResolution:{value:new THREE.Vector2()},uStyle:{value:0},uPrevious:{value:0},uBlend:{value:1},uExposure:{value:1.2},uEye:{value:eye},uUp:{value:V()},uSun:{value:Sun},uRot:{value:new THREE.Matrix3()},uAspect:{value:1},uTan:{value:.3},uAltitude:{value:10000},uTime:{value:0},uTitan:{value:bodies.titan.position},uSunScreen:{value:new THREE.Vector2()},uSolarVis:{value:0}};
-const postMat=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:postU,vertexShader:screenVert,fragmentShader:`varying vec2 vUv;uniform sampler2D tScene;uniform vec2 uResolution;uniform float uExposure,uAspect,uTan,uAltitude,uTime,uBlend;uniform int uStyle,uPrevious;uniform vec3 uEye,uUp,uSun,uTitan;uniform vec2 uSunScreen;uniform float uSolarVis;uniform mat3 uRot;${common}
+const rt=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:true,depthTexture:new THREE.DepthTexture(1,1,THREE.UnsignedIntType)});rt.samples=4;
+const postScene=new THREE.Scene();const postU={tScene:{value:rt.texture},tDepth:{value:rt.depthTexture},uCameraFar:{value:camera.far},uResolution:{value:new THREE.Vector2()},uStyle:{value:0},uPrevious:{value:0},uBlend:{value:1},uExposure:{value:1.2},uEye:{value:eye},uUp:{value:V()},uSun:{value:Sun},uRot:{value:new THREE.Matrix3()},uAspect:{value:1},uTan:{value:.3},uAltitude:{value:10000},uTime:{value:0},uTitan:{value:bodies.titan.position},uSunScreen:{value:new THREE.Vector2()},uSolarVis:{value:0}};
+const postMat=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:postU,vertexShader:screenVert,fragmentShader:`varying vec2 vUv;uniform sampler2D tScene,tDepth;uniform vec2 uResolution;uniform float uCameraFar,uExposure,uAspect,uTan,uAltitude,uTime,uBlend;uniform int uStyle,uPrevious;uniform vec3 uEye,uUp,uSun,uTitan;uniform vec2 uSunScreen;uniform float uSolarVis;uniform mat3 uRot;${common}
 
-vec2 hitEllipsoid(vec3 ro,vec3 rd,vec3 center,vec3 axes){vec3 p=(ro-center)/axes,d=rd/axes;float a=dot(d,d),b=dot(p,d),h=b*b-a*(dot(p,p)-1.);if(h<0.)return vec2(-1.);float root=sqrt(h);return vec2((-b-root)/a,(-b+root)/a);}
-vec4 scatterLimb(vec3 ro,vec3 rd,vec3 center,vec3 axes,float scale,vec3 tint){vec2 outer=hitEllipsoid(ro,rd,center,axes+vec3(scale*8.));if(outer.y<0.)return vec4(0.);float start=max(0.,outer.x),end=outer.y;vec2 solid=hitEllipsoid(ro,rd,center,axes);if(solid.x>0.)end=min(end,solid.x);if(end<=start)return vec4(0.);float stepLength=(end-start)/12.,trans=1.;vec3 sum=vec3(0.);float mu=dot(rd,uSun),g=.78,phase=(1.-g*g)/pow(max(.03,1.+g*g-2.*g*mu),1.5);for(int i=0;i<12;i++){vec3 p=ro+rd*(start+(float(i)+.5)*stepLength),local=p-center;float height=max(0.,(length(local/axes)-1.)*axes.x);float density=exp(-height/scale);vec3 normal=normalize(local/(axes*axes));float day=smoothstep(-.09,.20,dot(normal,uSun));float a=1.-exp(-density*stepLength/scale*.026);sum+=trans*a*tint*(.15+day*(.55+phase*.26));trans*=1.-a;}return vec4(sum,1.-trans);}
+// Closest-approach form avoids subtracting large squared terms at distant moon limbs.
+vec2 hitEllipsoid(vec3 ro,vec3 rd,vec3 center,vec3 axes){vec3 p=(ro-center)/axes,d=rd/axes;float a=dot(d,d),closest=-dot(p,d)/a;vec3 q=p+d*closest;float h=1.-dot(q,q);if(h<0.)return vec2(-1.);float span=sqrt(h/a);return vec2(closest-span,closest+span);}
+vec4 scatterLimb(vec3 ro,vec3 rd,vec3 center,vec3 axes,float scale,vec3 tint,float rayLimit){vec2 outer=hitEllipsoid(ro,rd,center,axes+vec3(scale*8.));if(outer.y<0.)return vec4(0.);float start=max(0.,outer.x),end=min(outer.y,rayLimit);vec2 solid=hitEllipsoid(ro,rd,center,axes);if(solid.x>0.)end=min(end,solid.x);else if(solid.y>0.)return vec4(0.);if(end<=start)return vec4(0.);float stepLength=(end-start)/12.,trans=1.;vec3 sum=vec3(0.);float mu=dot(rd,uSun),g=.78,phase=(1.-g*g)/pow(max(.03,1.+g*g-2.*g*mu),1.5);for(int i=0;i<12;i++){vec3 p=ro+rd*(start+(float(i)+.5)*stepLength),local=p-center;float height=max(0.,(length(local/axes)-1.)*axes.x);float density=exp(-height/scale);vec3 normal=normalize(local/(axes*axes));float day=smoothstep(-.09,.20,dot(normal,uSun));float a=1.-exp(-density*stepLength/scale*.026);sum+=trans*a*tint*(.15+day*(.55+phase*.26));trans*=1.-a;}return vec4(sum,1.-trans);}
 
 vec3 aces(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
 vec3 style(vec3 c,int s){float lum=dot(c,vec3(.299,.587,.114));if(s==1)return floor(c*5.+.5)/5.;if(s==3){vec2 d=1./uResolution;vec3 a=texture2D(tScene,vUv+vec2(d.x,0)).rgb,b=texture2D(tScene,vUv-vec2(d.x,0)).rgb,e=texture2D(tScene,vUv+vec2(0,d.y)).rgb,f=texture2D(tScene,vUv-vec2(0,d.y)).rgb;float edge=length(a-b)+length(e-f);return vec3(.23,.74,.80)*(pow(clamp(edge*7.,0.,1.),.65)*.85+pow(lum,1.3)*.20);}return c;}
-void main(){vec3 c=texture2D(tScene,vUv).rgb;vec2 p=(vUv-.5)*2.;vec3 rd=normalize(uRot*vec3(p.x*uAspect*uTan,p.y*uTan,-1.));vec4 halo=scatterLimb(uEye,rd,vec3(0.),vec3(60268.,54364.,60268.),55.,vec3(.44,.59,.82));c=c*(1.-halo.a*.55)+halo.rgb;vec4 titanHalo=scatterLimb(uEye,rd,uTitan,vec3(2574.7),38.,vec3(.80,.39,.11));c=c*(1.-titanHalo.a*.65)+titanHalo.rgb;
+void main(){vec3 c=texture2D(tScene,vUv).rgb;vec2 p=(vUv-.5)*2.;vec3 viewRay=vec3(p.x*uAspect*uTan,p.y*uTan,-1.),rd=normalize(uRot*viewRay);
+// Three.js logarithmic depth stores view-space Z, so convert it to distance along this ray.
+float viewDepth=exp2(texture2D(tDepth,vUv).r*log2(uCameraFar+1.))-1.;float rayLimit=viewDepth*length(viewRay);
+vec4 halo=scatterLimb(uEye,rd,vec3(0.),vec3(60268.,54364.,60268.),55.,vec3(.44,.59,.82),rayLimit),titanHalo=scatterLimb(uEye,rd,uTitan,vec3(2574.7),38.,vec3(.80,.39,.11),rayLimit);
+float saturnEntry=hitEllipsoid(uEye,rd,vec3(0.),vec3(60708.,54804.,60708.)).x,titanEntry=hitEllipsoid(uEye,rd,uTitan,vec3(2878.7)).x;
+if(saturnEntry>titanEntry){c=c*(1.-halo.a*.55)+halo.rgb;c=c*(1.-titanHalo.a*.65)+titanHalo.rgb;}else{c=c*(1.-titanHalo.a*.65)+titanHalo.rgb;c=c*(1.-halo.a*.55)+halo.rgb;}
 vec2 delta=(vUv-uSunScreen)*vec2(uAspect,1.);float flare=exp(-dot(delta,delta)*160.)*.032;float streak=exp(-abs(delta.y)*900.)*exp(-abs(delta.x)*13.)*.032;vec2 ghost=vUv-(vec2(.5)+(vec2(.5)-uSunScreen)*.62);float ghostRadius=length(ghost*vec2(uAspect,1.));float ghostRing=exp(-pow((ghostRadius-.042)/.008,2.))*.0025;c+=uSolarVis*(vec3(1.,.72,.36)*(flare+streak)+vec3(.26,.43,.55)*ghostRing);
 float atmo=1.-smoothstep(180.,950.,uAltitude);
 if(atmo>0.){float elev=dot(rd,uUp);float sunlight=max(0.,dot(rd,uSun));float horizon=exp(-abs(elev+.02)*5.);vec3 haze=mix(vec3(.025,.009,.003),vec3(.66,.37,.115),horizon);haze+=vec3(.65,.37,.11)*pow(sunlight,32.);c=mix(c,haze,atmo*(.30+horizon*.47));c=mix(c,haze*.65,atmo*(1.-smoothstep(-.12,-.015,elev)));
@@ -222,4 +229,4 @@ $('universe').addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))r
 addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)||$('about').open)return;if(e.key.toLowerCase()==='h')document.body.classList.toggle('clean');if(e.key==='Escape')document.body.classList.remove('clean');if(e.code==='Space'&&document.activeElement.tagName!=='BUTTON'){e.preventDefault();play();}if(e.key==='ArrowLeft')adjust(.04,0);if(e.key==='ArrowRight')adjust(-.04,0);if(e.key==='ArrowUp')adjust(0,.03);if(e.key==='ArrowDown')adjust(0,-.03);});
 $('universe').addEventListener('webglcontextlost',e=>{e.preventDefault();$('loading').classList.remove('hide');$('loading').textContent='图形连接中断，请刷新页面。';});
 // Read-only diagnostics are presented in the page so navigation limits and physical data are inspectable.
-function diagnostics(){let p=currentPreset();$('diagnostics').textContent=JSON.stringify({version:"3.1",moonModelKinds:Object.fromEntries(Object.entries(bodies).map(([id,b])=>[id,b.object.userData.modelKind])),iceFieldWidthKm:8,outerParticleWidthKm:64,ringLayerThicknessM:10,ringParticleDistribution:"uniform-area / periodic LOD tiles",shot:state.scene,inTransit:!!state.transit,yaw:state.yaw,pitch:state.pitch,zoom:state.zoom,limits:p.limits,eye:eye.toArray(),target:look.toArray(),sun:Sun.toArray(),saturnRadiusKm:R,polarRadiusKm:RP,ringOuterKm:136780,moonCount:moonSpecs.length,cassiniRadiusKm:cassiniPos.length(),epoch:'2004-07-01T02:39:00Z',lighting:'v1-art-directed',coneHalfAngle:currentPreset().cone||null,craftDistance:eye.distanceTo(cassiniPos),routeLength:state.transit?.route.length||0},null,2);requestAnimationFrame(diagnostics);}diagnostics();
+function diagnostics(){let p=currentPreset();$('diagnostics').textContent=JSON.stringify({version:"3.1.2",moonModelKinds:Object.fromEntries(Object.entries(bodies).map(([id,b])=>[id,b.object.userData.modelKind])),iceFieldWidthKm:16,outerParticleWidthKm:128,ringLayerThicknessM:10,ringParticleDistribution:"continuous circular footprints / chord-periodic shear",shot:state.scene,inTransit:!!state.transit,yaw:state.yaw,pitch:state.pitch,zoom:state.zoom,limits:p.limits,eye:eye.toArray(),target:look.toArray(),sun:Sun.toArray(),saturnRadiusKm:R,polarRadiusKm:RP,ringOuterKm:136780,moonCount:moonSpecs.length,cassiniRadiusKm:cassiniPos.length(),epoch:'2004-07-01T02:39:00Z',lighting:'v1-art-directed',coneHalfAngle:currentPreset().cone||null,craftDistance:eye.distanceTo(cassiniPos),routeLength:state.transit?.route.length||0},null,2);requestAnimationFrame(diagnostics);}diagnostics();

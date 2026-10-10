@@ -8,7 +8,7 @@ source=source.slice(0,importEnd)+'\n(async()=>{\n'+source.slice(importEnd)+'\n})
 const result=await build({stdin:{contents:source,resolveDir:path.join(root,'src'),sourcefile:'main.js',loader:'js'},bundle:true,format:'iife',target:'es2022',minify:true,write:false,legalComments:'inline'});
 let old=fs.readFileSync(path.join(root,'src/shell.html'),'utf8');
 let html=old;
-html=html.replace('<title>土星 · SATURN OBSERVATORY</title>','<title>土星 · SATURN OBSERVATORY 3.1</title>');
+html=html.replace('<title>土星 · SATURN OBSERVATORY</title>','<title>土星 · SATURN OBSERVATORY 3.1.2</title>');
 const views=['classic','wide','cloud','ring','edge','atmos','backlit'];const scenes=['hex','titan','enceladus','mimas','aurora'];
 html=html.replace(/data-view="(\d)"/g,(_,i)=>`data-shot="${views[+i]}"`).replace(/data-scene="(\d)"/g,(_,i)=>`data-shot="${scenes[+i-1]}"`);
 html=html.replace('<button class="back" id="back">','<button class="scene-btn" data-shot="cassini" aria-pressed="false">卡西尼—惠更斯<span>06 ↗</span></button><select id="moonSelect" aria-label="前往其他卫星"><option value="">其他卫星 · 19 颗</option></select><button class="back" id="back">');
